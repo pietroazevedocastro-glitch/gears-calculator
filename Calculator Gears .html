@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BABFT Gear &amp; Ratio Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            babft: {
+              bg: '#070709',
+              card: '#0f0f13',
+              surface: '#17171d',
+              border: '#262631',
+              crimson: '#ef233c',
+              crimsonDark: '#991b1b',
+              crimsonGlow: '#ff4d6d',
+              amber: '#f59e0b',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #070709;
+      color: #f4f4f6;
+      background-image:
+        radial-gradient(circle at 12% 10%, rgba(239, 35, 60, 0.16) 0%, transparent 42%),
+        radial-gradient(circle at 88% 82%, rgba(245, 158, 11, 0.08) 0%, transparent 45%),
+        linear-gradient(180deg, rgba(18, 8, 11, 0.58) 0%, rgba(7, 7, 9, 0.98) 100%);
+      overflow-x: hidden;
+    }
+
+    .blueprint-bg {
+      background-color: #09090d;
+      background-image:
+        linear-gradient(to right, rgba(239, 35, 60, 0.09) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(239, 35, 60, 0.09) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
+    }
+
+    input[type="range"].range-crimson,
+    input[type="range"].range-amber {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"].range-crimson::-webkit-slider-runnable-track,
+    input[type="range"].range-amber::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 999px;
+      background: #24242f;
+    }
+
+    input[type="range"].range-crimson::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      margin-top: -5px;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: #ef233c;
+      border: 2px solid #ffe4e6;
+      box-shadow: 0 0 10px rgba(239, 35, 60, 0.85);
+      transition: transform 0.14s ease;
+    }
+
+    input[type="range"].range-amber::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      margin-top: -5px;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: #f59e0b;
+      border: 2px solid #fef3c7;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+      transition: transform 0.14s ease;
+    }
+
+    input[type="range"]:hover::-webkit-slider-thumb {
+      transform: scale(1.16);
+    }
+
+    .industrial-btn {
+      box-shadow: 0 4px 16px rgba(239, 35, 60, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+      transition: transform 0.14s ease, box-shadow 0.14s ease, background-color 0.14s ease;
+    }
+
+    .industrial-btn:hover {
+      box-shadow: 0 6px 22px rgba(239, 35, 60, 0.44), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    }
+
+    .industrial-btn:active {
+      transform: scale(0.97);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-[#ef233c] selection:text-white">
+
+  <!-- Banner de notificação não bloqueante (nunca usa alert/confirm) -->
+  <div id="toastBanner" role="status" aria-live="polite" class="fixed bottom-5 right-5 z-50 pointer-events-none transform translate-y-24 opacity-0 transition-all duration-300">
+    <div class="bg-zinc-950/95 border border-[#ef233c] text-white px-4 py-3 rounded-xl shadow-2xl shadow-rose-950/80 flex items-center gap-3">
+      <span class="w-2.5 h-2.5 rounded-full bg-[#ef233c] animate-pulse shrink-0"></span>
+      <span id="toastText" class="text-xs sm:text-sm font-semibold"></span>
+    </div>
+  </div>
+
+  <!-- Cabeçalho -->
+  <header class="sticky top-0 z-30 bg-zinc-950/92 backdrop-blur-md border-b border-babft-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ef233c] to-[#991b1b] flex items-center justify-center border border-rose-400/35 shadow-lg shadow-rose-900/50 shrink-0">
+          <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 id="appTitle" class="text-base sm:text-xl font-extrabold tracking-tight text-white truncate"></h1>
+            <span id="headerBadge" class="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold uppercase bg-rose-500/15 text-rose-400 border border-rose-500/35"></span>
+          </div>
+          <p id="appSubtitle" class="text-xs text-zinc-400 truncate"></p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-2.5">
+        <!-- Botão de alternância de idioma PT / EN -->
+        <button
+          type="button"
+          id="langToggleBtn"
+          aria-label="Switch language between Portuguese and English"
+          class="px-3.5 py-2 rounded-xl bg-babft-surface hover:bg-zinc-800 text-white border border-rose-500/50 hover:border-[#ef233c] text-xs sm:text-sm font-mono font-extrabold transition flex items-center gap-2 cursor-pointer"
+        >
+          <span id="langFlag">🇺🇸</span>
+          <span id="langBtnLabel">EN</span>
+        </button>
+
+        <!-- Botão para baixar index.html autônomo -->
+        <button
+          type="button"
+          id="downloadHtmlBtn"
+          class="industrial-btn px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-[#ef233c] to-[#dc2626] hover:from-[#ff4d6d] hover:to-[#ef233c] text-white text-xs sm:text-sm font-bold border border-rose-400/35 flex items-center gap-2 cursor-pointer"
+        >
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          <span id="downloadBtnText"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- COLUNA ESQUERDA: Relações, Engrenagem 1, Engrenagem 2 e Módulo (5 cols) -->
+      <div class="lg:col-span-5 space-y-5">
+
+        <!-- Presets de Relação / Escala -->
+        <section class="bg-babft-card border border-babft-border rounded-2xl p-5 shadow-xl">
+          <div class="flex items-center justify-between gap-2 mb-2.5">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-5 rounded-full bg-[#ef233c] inline-block"></span>
+              <span id="ratiosTitleText"></span>
+            </h2>
+            <span id="ratioLiveBadge" class="px-2.5 py-0.5 rounded-lg bg-rose-500/15 border border-rose-500/40 text-xs font-mono font-extrabold text-rose-400"></span>
+          </div>
+          <p id="ratiosDescText" class="text-xs text-zinc-400 mb-3"></p>
+
+          <div id="ratioPresetsGrid" class="grid grid-cols-3 gap-2">
+            <button type="button" data-n1="24" data-n2="24" class="ratio-preset-btn p-2.5 rounded-xl bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 hover:border-rose-500/50 text-center transition cursor-pointer">
+              <div class="text-xs font-mono font-extrabold text-white">1 : 1</div>
+              <div class="ratio-sub text-[10px] font-mono text-zinc-400 mt-0.5"></div>
+            </button>
+            <button type="button" data-n1="24" data-n2="12" class="ratio-preset-btn p-2.5 rounded-xl bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 hover:border-rose-500/50 text-center transition cursor-pointer">
+              <div class="text-xs font-mono font-extrabold text-white">2 : 1</div>
+              <div class="ratio-sub text-[10px] font-mono text-zinc-400 mt-0.5"></div>
+            </button>
+            <button type="button" data-n1="36" data-n2="12" class="ratio-preset-btn p-2.5 rounded-xl bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 hover:border-rose-500/50 text-center transition cursor-pointer">
+              <div class="text-xs font-mono font-extrabold text-white">3 : 1</div>
+              <div class="ratio-sub text-[10px] font-mono text-zinc-400 mt-0.5"></div>
+            </button>
+            <button type="button" data-n1="48" data-n2="12" class="ratio-preset-btn p-2.5 rounded-xl bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 hover:border-rose-500/50 text-center transition cursor-pointer">
+              <div class="text-xs font-mono font-extrabold text-white">4 : 1</div>
+              <div class="ratio-sub text-[10px] font-mono text-zinc-400 mt-0.5"></div>
+            </button>
+            <button type="button" data-n1="12" data-n2="24" class="ratio-preset-btn p-2.5 rounded-xl bg-babft-surface hover:bg-amber-500/20 border border-zinc-800 hover:border-amber-500/50 text-center transition cursor-pointer">
+              <div class="text-xs font-mono font-extrabold text-white">2 : 4</div>
+              <div class="ratio-sub text-[10px] font-mono text-zinc-400 mt-0.5"></div>
+            </button>
+            <button type="button" data-n1="12" data-n2="36" class="ratio-preset-btn p-2.5 rounded-xl bg-babft-surface hover:bg-amber-500/20 border border-zinc-800 hover:border-amber-500/50 text-center transition cursor-pointer">
+              <div class="text-xs font-mono font-extrabold text-white">1 : 3</div>
+              <div class="ratio-sub text-[10px] font-mono text-zinc-400 mt-0.5"></div>
+            </button>
+          </div>
+
+          <div class="mt-3 px-3 py-2 rounded-xl bg-zinc-950/90 border border-zinc-800 text-xs text-zinc-300 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+            <span id="ratioSummaryText"></span>
+          </div>
+        </section>
+
+        <!-- Engrenagem 1 (Padrão: 24 dentes) -->
+        <section class="bg-babft-card border border-rose-500/40 rounded-2xl p-5 shadow-xl">
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-[#ef233c] shadow shadow-rose-500/60 inline-block"></span>
+              <span id="gear1HeadingText"></span>
+            </h2>
+            <span id="gear1TagBadge" class="text-[11px] font-mono font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/30"></span>
+          </div>
+
+          <div class="flex justify-between items-center mb-1.5">
+            <label id="gear1TeethLabel" for="gear1TeethInput" class="text-xs font-semibold text-zinc-300"></label>
+            <span id="gear1MinMaxText" class="text-[11px] text-zinc-500"></span>
+          </div>
+
+          <input
+            id="gear1TeethInput"
+            type="number"
+            inputmode="numeric"
+            min="3"
+            max="360"
+            step="1"
+            value="24"
+            class="w-full bg-babft-surface border border-zinc-700 focus:border-[#ef233c] focus:ring-2 focus:ring-rose-500/25 rounded-xl px-4 py-2.5 text-lg font-mono font-bold text-white outline-none transition"
+          />
+
+          <input
+            id="gear1TeethSlider"
+            type="range"
+            min="3"
+            max="120"
+            step="1"
+            value="24"
+            class="w-full mt-2.5 range-crimson"
+          />
+
+          <div id="gear1QuickButtons" class="flex flex-wrap gap-1.5 mt-2.5">
+            <button type="button" data-teeth="12" class="g1-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">12</button>
+            <button type="button" data-teeth="16" class="g1-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">16</button>
+            <button type="button" data-teeth="24" class="g1-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">24</button>
+            <button type="button" data-teeth="36" class="g1-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">36</button>
+            <button type="button" data-teeth="48" class="g1-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">48</button>
+          </div>
+        </section>
+
+        <!-- Engrenagem 2 (Padrão: 12 dentes) -->
+        <section class="bg-babft-card border border-amber-500/40 rounded-2xl p-5 shadow-xl">
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-[#f59e0b] shadow shadow-amber-500/60 inline-block"></span>
+              <span id="gear2HeadingText"></span>
+            </h2>
+            <span id="gear2TagBadge" class="text-[11px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30"></span>
+          </div>
+
+          <div class="flex justify-between items-center mb-1.5">
+            <label id="gear2TeethLabel" for="gear2TeethInput" class="text-xs font-semibold text-zinc-300"></label>
+            <span id="gear2MinMaxText" class="text-[11px] text-zinc-500"></span>
+          </div>
+
+          <input
+            id="gear2TeethInput"
+            type="number"
+            inputmode="numeric"
+            min="3"
+            max="360"
+            step="1"
+            value="12"
+            class="w-full bg-babft-surface border border-zinc-700 focus:border-[#f59e0b] focus:ring-2 focus:ring-amber-500/25 rounded-xl px-4 py-2.5 text-lg font-mono font-bold text-white outline-none transition"
+          />
+
+          <input
+            id="gear2TeethSlider"
+            type="range"
+            min="3"
+            max="120"
+            step="1"
+            value="12"
+            class="w-full mt-2.5 range-amber"
+          />
+
+          <div id="gear2QuickButtons" class="flex flex-wrap gap-1.5 mt-2.5">
+            <button type="button" data-teeth="8" class="g2-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-amber-500/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">8</button>
+            <button type="button" data-teeth="12" class="g2-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-amber-500/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">12</button>
+            <button type="button" data-teeth="24" class="g2-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-amber-500/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">24</button>
+            <button type="button" data-teeth="36" class="g2-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-amber-500/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">36</button>
+            <button type="button" data-teeth="48" class="g2-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-amber-500/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">48</button>
+          </div>
+        </section>
+
+        <!-- Módulo / Tamanho & Modo de Rotação -->
+        <section class="bg-babft-card border border-babft-border rounded-2xl p-5 shadow-xl space-y-4">
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label for="moduleInput" class="text-sm font-bold text-white flex items-center gap-2">
+                <span class="w-2 h-4 rounded-full bg-[#ef233c] inline-block"></span>
+                <span id="moduleLabelText"></span>
+              </label>
+              <span id="moduleBaseBadge" class="text-[11px] font-mono text-zinc-400"></span>
+            </div>
+
+            <input
+              id="moduleInput"
+              type="number"
+              inputmode="decimal"
+              min="0.05"
+              max="50"
+              step="0.1"
+              value="1"
+              class="w-full bg-babft-surface border border-zinc-700 focus:border-[#ef233c] focus:ring-2 focus:ring-rose-500/25 rounded-xl px-4 py-2.5 text-lg font-mono font-bold text-white outline-none transition"
+            />
+
+            <div id="moduleQuickButtons" class="flex flex-wrap gap-1.5 mt-2.5">
+              <button type="button" data-mod="0.5" class="mod-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">0.5</button>
+              <button type="button" data-mod="1" class="mod-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">1</button>
+              <button type="button" data-mod="1.5" class="mod-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">1.5</button>
+              <button type="button" data-mod="2" class="mod-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">2</button>
+              <button type="button" data-mod="3" class="mod-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer">3</button>
+            </div>
+            <p id="moduleHelperText" class="text-[11px] text-zinc-400 mt-2 leading-relaxed"></p>
+          </div>
+
+          <div class="border-t border-zinc-800/90 pt-3.5">
+            <span id="turnModeHeading" class="text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-2"></span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button type="button" id="turnMode360Btn" class="p-2.5 rounded-xl border text-left transition cursor-pointer">
+                <div id="turnMode360Title" class="text-xs font-bold text-white"></div>
+                <div id="turnMode360Sub" class="text-[11px] text-zinc-400 mt-0.5"></div>
+              </button>
+              <button type="button" id="turnMode180Btn" class="p-2.5 rounded-xl border text-left transition cursor-pointer">
+                <div id="turnMode180Title" class="text-xs font-bold text-white"></div>
+                <div id="turnMode180Sub" class="text-[11px] text-zinc-400 mt-0.5"></div>
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- COLUNA DIREITA: Distância entre Centros, Resultados das 2 Engrenagens, Canvas 2D e Guia (7 cols) -->
+      <div class="lg:col-span-7 space-y-5">
+
+        <!-- Destaque de Distância entre Centros & Relação -->
+        <section class="bg-babft-card border border-rose-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl shadow-rose-950/25">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+            <div class="sm:col-span-7">
+              <div class="flex items-center gap-2 mb-1">
+                <span id="centerBadge" class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-[10px] font-mono font-bold uppercase text-rose-400"></span>
+                <span class="text-[11px] font-mono text-zinc-500">(D1 + D2) / 2</span>
+              </div>
+              <div class="flex flex-wrap items-baseline gap-2.5">
+                <span id="centerLabel" class="text-xs sm:text-sm font-semibold text-zinc-300"></span>
+                <span id="centerDistanceValue" class="text-2xl sm:text-3xl font-mono font-extrabold text-white"></span>
+              </div>
+              <p id="centerHintText" class="text-[11px] text-zinc-400 mt-1 leading-relaxed"></p>
+            </div>
+
+            <div class="sm:col-span-5 flex flex-col sm:items-end justify-between gap-2.5 border-t sm:border-t-0 sm:border-l border-zinc-800 pt-3 sm:pt-0 sm:pl-4">
+              <div class="sm:text-right">
+                <span id="ratioBoxLabel" class="text-[11px] uppercase tracking-wider text-zinc-400 block"></span>
+                <span id="ratioMainValue" class="text-xl font-mono font-extrabold text-amber-400"></span>
+                <span id="ratioSpeedText" class="text-[11px] text-zinc-300 block"></span>
+              </div>
+              <button
+                type="button"
+                id="copyCenterBtn"
+                class="industrial-btn w-full sm:w-auto px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#ef233c] to-[#dc2626] hover:from-[#ff4d6d] hover:to-[#ef233c] text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                </svg>
+                <span id="copyCenterBtnText"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Cartões de Medições Centralizadas para Engrenagem 1 e Engrenagem 2 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <!-- Engrenagem 1 -->
+          <section class="bg-babft-card border border-rose-500/40 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#ef233c]"></span>
+                <h3 id="card1Title" class="text-sm font-extrabold text-white"></h3>
+              </div>
+              <span id="card1TeethBadge" class="text-xs font-mono font-bold text-rose-400"></span>
+            </div>
+
+            <!-- Rotação 1 -->
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3 flex items-center justify-between gap-2">
+              <div>
+                <span class="rot-label text-[11px] uppercase font-semibold text-zinc-400 block"></span>
+                <div class="flex items-baseline gap-2">
+                  <span id="g1RotValue" class="text-xl font-mono font-extrabold text-[#ef233c]"></span>
+                  <span id="g1PartsText" class="text-[11px] font-mono text-zinc-400"></span>
+                </div>
+              </div>
+              <button type="button" data-copy-key="g1Rot" class="copy-metric-btn px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-[#ef233c] text-zinc-300 hover:text-white border border-zinc-700 text-xs font-semibold transition cursor-pointer"></button>
+            </div>
+
+            <!-- Diâmetro 1 -->
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="diam-label text-[11px] uppercase font-semibold text-zinc-400 block"></span>
+                  <div class="flex items-baseline gap-1.5">
+                    <span id="g1DiamValue" class="text-xl font-mono font-extrabold text-white"></span>
+                    <span class="studs-unit text-[11px] text-zinc-400"></span>
+                  </div>
+                </div>
+                <button type="button" data-copy-key="g1DiamSide" class="copy-side-btn px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-[#ef233c] text-zinc-300 hover:text-white border border-zinc-700 text-xs font-semibold transition cursor-pointer"></button>
+              </div>
+              <div class="bg-zinc-950/90 border border-rose-500/30 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs">
+                <span class="diam-side-label text-zinc-400"></span>
+                <span id="g1DiamSideValue" class="font-mono font-extrabold text-rose-400"></span>
+              </div>
+              <div class="flex justify-between text-[11px] text-zinc-500 px-0.5">
+                <span class="base-block-note"></span>
+                <span id="g1DiamTotalText"></span>
+              </div>
+            </div>
+
+            <!-- Largura dos Dentes 1 -->
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="width-label text-[11px] uppercase font-semibold text-zinc-400 block"></span>
+                  <div class="flex items-baseline gap-1.5">
+                    <span id="g1WidthValue" class="text-xl font-mono font-extrabold text-rose-400"></span>
+                    <span class="studs-unit text-[11px] text-zinc-400"></span>
+                  </div>
+                </div>
+                <button type="button" data-copy-key="g1WidthSide" class="copy-side-btn px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-[#ef233c] text-zinc-300 hover:text-white border border-zinc-700 text-xs font-semibold transition cursor-pointer"></button>
+              </div>
+              <div class="bg-zinc-950/90 border border-rose-500/30 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs">
+                <span class="width-side-label text-zinc-400"></span>
+                <span id="g1WidthSideValue" class="font-mono font-extrabold text-rose-400"></span>
+              </div>
+              <div class="flex justify-between text-[11px] text-zinc-500 px-0.5">
+                <span class="base-block-note"></span>
+                <span id="g1WidthTotalText"></span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Engrenagem 2 -->
+          <section class="bg-babft-card border border-amber-500/40 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></span>
+                <h3 id="card2Title" class="text-sm font-extrabold text-white"></h3>
+              </div>
+              <span id="card2TeethBadge" class="text-xs font-mono font-bold text-amber-400"></span>
+            </div>
+
+            <!-- Rotação 2 -->
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3 flex items-center justify-between gap-2">
+              <div>
+                <span class="rot-label text-[11px] uppercase font-semibold text-zinc-400 block"></span>
+                <div class="flex items-baseline gap-2">
+                  <span id="g2RotValue" class="text-xl font-mono font-extrabold text-[#f59e0b]"></span>
+                  <span id="g2PartsText" class="text-[11px] font-mono text-zinc-400"></span>
+                </div>
+              </div>
+              <button type="button" data-copy-key="g2Rot" class="copy-metric-btn px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-amber-600 text-zinc-300 hover:text-white border border-zinc-700 text-xs font-semibold transition cursor-pointer"></button>
+            </div>
+
+            <!-- Diâmetro 2 -->
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="diam-label text-[11px] uppercase font-semibold text-zinc-400 block"></span>
+                  <div class="flex items-baseline gap-1.5">
+                    <span id="g2DiamValue" class="text-xl font-mono font-extrabold text-white"></span>
+                    <span class="studs-unit text-[11px] text-zinc-400"></span>
+                  </div>
+                </div>
+                <button type="button" data-copy-key="g2DiamSide" class="copy-side-btn px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-amber-600 text-zinc-300 hover:text-white border border-zinc-700 text-xs font-semibold transition cursor-pointer"></button>
+              </div>
+              <div class="bg-zinc-950/90 border border-amber-500/30 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs">
+                <span class="diam-side-label text-zinc-400"></span>
+                <span id="g2DiamSideValue" class="font-mono font-extrabold text-amber-400"></span>
+              </div>
+              <div class="flex justify-between text-[11px] text-zinc-500 px-0.5">
+                <span class="base-block-note"></span>
+                <span id="g2DiamTotalText"></span>
+              </div>
+            </div>
+
+            <!-- Largura dos Dentes 2 -->
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <span class="width-label text-[11px] uppercase font-semibold text-zinc-400 block"></span>
+                  <div class="flex items-baseline gap-1.5">
+                    <span id="g2WidthValue" class="text-xl font-mono font-extrabold text-amber-400"></span>
+                    <span class="studs-unit text-[11px] text-zinc-400"></span>
+                  </div>
+                </div>
+                <button type="button" data-copy-key="g2WidthSide" class="copy-side-btn px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-amber-600 text-zinc-300 hover:text-white border border-zinc-700 text-xs font-semibold transition cursor-pointer"></button>
+              </div>
+              <div class="bg-zinc-950/90 border border-amber-500/30 rounded-lg px-2.5 py-1.5 flex items-center justify-between text-xs">
+                <span class="width-side-label text-zinc-400"></span>
+                <span id="g2WidthSideValue" class="font-mono font-extrabold text-amber-400"></span>
+              </div>
+              <div class="flex justify-between text-[11px] text-zinc-500 px-0.5">
+                <span class="base-block-note"></span>
+                <span id="g2WidthTotalText"></span>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- Canvas 2D Interativo Sincronizado -->
+        <section class="bg-babft-card border border-babft-border rounded-2xl overflow-hidden shadow-xl">
+          <div class="px-4 sm:px-5 py-3 border-b border-zinc-800 bg-zinc-950/75 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#ef233c]"></span>
+              <h2 id="canvasHeadingText" class="text-sm font-bold text-white"></h2>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                id="toggleRotateBtn"
+                class="industrial-btn px-3 py-1.5 rounded-lg bg-[#ef233c] hover:bg-[#ff4d6d] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <span id="rotateBtnIcon">❚❚</span>
+                <span id="rotateBtnLabel"></span>
+              </button>
+
+              <button
+                type="button"
+                id="simulateBuildBtn"
+                class="px-3 py-1.5 rounded-lg bg-babft-surface hover:bg-zinc-800 text-zinc-200 border border-zinc-700 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <svg class="w-3.5 h-3.5 text-rose-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                </svg>
+                <span id="simulateBuildLabel"></span>
+              </button>
+            </div>
+          </div>
+
+          <div id="canvasContainer" class="relative w-full h-[330px] sm:h-[380px] blueprint-bg select-none">
+            <canvas id="gearCanvas" class="w-full h-full block"></canvas>
+
+            <div class="absolute bottom-3 left-3 bg-zinc-950/90 backdrop-blur-sm border border-zinc-800 rounded-xl px-3 py-2 text-[11px] text-zinc-300 space-y-1 pointer-events-none">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#ef233c] inline-block"></span>
+                <span id="legendGear1Text"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#f59e0b] inline-block"></span>
+                <span id="legendGear2Text"></span>
+              </div>
+              <div id="buildProgressRow" class="hidden pt-1 border-t border-zinc-800 text-rose-400 font-mono">
+                <span id="buildProgressLabel"></span> <span id="buildProgressValue"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Guia Rápido de Montagem Centralizada -->
+        <section class="bg-babft-card border border-babft-border rounded-2xl p-5 shadow-xl">
+          <div class="flex items-center justify-between mb-3.5">
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-5 rounded-full bg-[#ef233c] inline-block"></span>
+              <span id="guideHeadingText"></span>
+            </h3>
+            <span id="guideBadgeText" class="text-[11px] font-mono text-zinc-500"></span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3.5">
+              <span id="step1Badge" class="inline-block px-2 py-0.5 rounded bg-[#ef233c] text-white font-mono font-bold text-[11px] mb-2"></span>
+              <h4 id="step1Title" class="text-xs font-bold text-white mb-1"></h4>
+              <p id="step1Body" class="text-[11px] text-zinc-400 leading-relaxed"></p>
+            </div>
+
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3.5">
+              <span id="step2Badge" class="inline-block px-2 py-0.5 rounded bg-[#ef233c] text-white font-mono font-bold text-[11px] mb-2"></span>
+              <h4 id="step2Title" class="text-xs font-bold text-white mb-1"></h4>
+              <p id="step2Body" class="text-[11px] text-zinc-400 leading-relaxed"></p>
+            </div>
+
+            <div class="bg-babft-surface border border-zinc-800 rounded-xl p-3.5">
+              <span id="step3Badge" class="inline-block px-2 py-0.5 rounded bg-[#f59e0b] text-zinc-950 font-mono font-bold text-[11px] mb-2"></span>
+              <h4 id="step3Title" class="text-xs font-bold text-white mb-1"></h4>
+              <p id="step3Body" class="text-[11px] text-zinc-400 leading-relaxed"></p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Rodapé -->
+  <footer class="border-t border-zinc-900 bg-zinc-950/90 py-4 px-4 sm:px-6 lg:px-8 mt-6">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-500">
+      <p id="footerLeftText"></p>
+      <p id="footerRightText" class="font-mono text-zinc-400"></p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // Bloco padrão de 2 studs no Build A Boat For Treasure
+      const BASE_BLOCK_STUDS = 2;
+
+      const translations = {
+        pt: {
+          htmlLang: 'pt-BR',
+          pageTitle: 'BABFT Gear & Ratio Calculator',
+          appTitle: 'BABFT GEAR & RATIO CALC',
+          headerBadge: '2 Engrenagens',
+          appSubtitle: 'Build A Boat For Treasure • Escala Centralizada e Relação de Transmissão',
+          langFlag: '🇺🇸',
+          langBtnLabel: 'EN',
+          downloadBtnText: 'Baixar index.html',
+          downloadFilename: 'index.html',
+          ratiosTitleText: 'Escalas / Relações Rápidas',
+          ratiosDescText: 'Selecione uma escala pronta entre a <strong class="text-rose-400">Engrenagem 1</strong> e a <strong class="text-amber-400">Engrenagem 2</strong>:',
+          teethUnitShort: 'dentes',
+          ratioDirect: (r) => `Escala <strong class="text-white font-mono">${r}</strong> — Mesma velocidade (1.00x).`,
+          ratioFaster: (r, mult) => `Escala <strong class="text-white font-mono">${r}</strong> — Engrenagem 2 gira <strong class="text-amber-400 font-mono">${mult}x mais rápido</strong>.`,
+          ratioTorque: (r, speed, torque) => `Escala <strong class="text-white font-mono">${r}</strong> — Ganho de <strong class="text-rose-400 font-mono">${torque}x torque</strong> (velocidade ${speed}x).`,
+          speedSameLabel: 'Mesma velocidade (1.00x)',
+          speedFasterLabel: (mult) => `Eng. 2 gira ${mult}x mais rápido`,
+          speedTorqueLabel: (speed) => `Eng. 2 gira ${speed}x`,
+          gear1HeadingText: 'Engrenagem 1 (Motora)',
+          gear1TagBadge: 'VERMELHA',
+          gear1TeethLabel: 'Quantidade de Dentes (N1)',
+          gear2HeadingText: 'Engrenagem 2 (Movida)',
+          gear2TagBadge: 'ÂMBAR',
+          gear2TeethLabel: 'Quantidade de Dentes (N2)',
+          minMaxTeethText: 'Mín: 3 | Máx: 360',
+          moduleLabelText: 'Tamanho / Módulo (M)',
+          moduleBaseBadge: 'Barra base: 2 studs',
+          moduleHelperText: 'Ambas as engrenagens usam o mesmo <strong class="text-zinc-200">Módulo</strong> para o encaixe dos dentes.',
+          turnModeHeading: 'Modo de Rotação por Passo',
+          turnMode360Title: '360° / N (Padrão)',
+          turnMode360Sub: 'Ex: 24 dentes = 15°',
+          turnMode180Title: '180° / N (Meia-Volta / Cruzado)',
+          turnMode180Sub: 'Barra cruzada (2 dentes)',
+          centerBadge: 'Distância entre Eixos',
+          centerLabel: 'Distância entre Centros:',
+          centerHintText: (val) => `Posicione o eixo da <strong class="text-amber-400">Engrenagem 2</strong> a exatamente <strong class="text-white font-mono">${val}</strong> studs do centro da <strong class="text-rose-400">Engrenagem 1</strong>.`,
+          ratioBoxLabel: 'Relação (N1 : N2)',
+          copyCenterBtnText: 'Copiar Distância',
+          card1Title: 'Engrenagem 1 (Motora)',
+          card2Title: 'Engrenagem 2 (Movida)',
+          cardTeethBadge: (n) => `${n} Dentes`,
+          rotLabel: 'Rotation (Rotação)',
+          partsCountText: (n) => `• ${n} ${n === 1 ? 'peça' : 'peças'}`,
+          copyBtnText: 'Copiar',
+          copySideBtnText: 'Copiar Lado',
+          diamLabel: 'Diameter (Diâmetro)',
+          diamSideLabel: 'Cima / Baixo (cada lado):',
+          widthLabel: 'Teeth Width (Largura)',
+          widthSideLabel: 'Esquerda / Direita (cada lado):',
+          baseBlockNote: 'Barra padrão: 2 studs',
+          totalDeltaText: (val) => `Total: ${val}`,
+          studsUnit: 'studs',
+          canvasHeadingText: 'Simulação 2D Sincronizada',
+          pauseLabel: 'Pausar',
+          rotateLabel: 'Girar',
+          simulateBuildLabel: 'Simular Montagem',
+          legendGear1Text: (n, d) => `Engrenagem 1: ${n} dentes • Ø ${d}`,
+          legendGear2Text: (n, d) => `Engrenagem 2: ${n} dentes • Ø ${d}`,
+          buildProgressLabel: 'Montando barra:',
+          canvasCenterLabel: (val) => `Centros: ${val} studs`,
+          guideHeadingText: 'Guia Rápido de Centralização no BABFT',
+          guideBadgeText: 'PASSO A PASSO',
+          step1Badge: 'PASSO 01',
+          step1Title: 'Centralize a Engrenagem 1',
+          step1Body: (dSide, wSide, rot) => `Na barra de <strong class="text-zinc-200">2 studs</strong>, puxe <strong class="text-rose-400 font-mono">${dSide}</strong> <strong class="text-zinc-200">cima/baixo</strong> e <strong class="text-rose-400 font-mono">${wSide}</strong> <strong class="text-zinc-200">esquerda/direita</strong>. Duplique girando <strong class="text-white font-mono">${rot}</strong>.`,
+          step2Badge: 'PASSO 02',
+          step2Title: 'Alinhe os Centros',
+          step2Body: (dist) => `Afaste o segundo eixo exatamente <strong class="text-white font-mono">${dist}</strong> studs a partir do centro da Engrenagem 1.`,
+          step3Badge: 'PASSO 03',
+          step3Title: 'Centralize a Engrenagem 2',
+          step3Body: (dSide, wSide, rot) => `Puxe <strong class="text-amber-400 font-mono">${dSide}</strong> <strong class="text-zinc-200">cima/baixo</strong> e <strong class="text-amber-400 font-mono">${wSide}</strong> <strong class="text-zinc-200">esquerda/direita</strong>, girando <strong class="text-white font-mono">${rot}</strong> para encaixar.`,
+          footerLeftText: 'BABFT Gear & Ratio Calculator • Tema Vermelho & Preto',
+          footerRightText: 'D = M × (N - 9) [N ≥ 10] • W = 0.2 × M • Centros = (D1 + D2) / 2',
+          toastCopied: (label, val) => `${label}: ${val} copiado!`,
+          toastCopyFail: 'Não foi possível copiar o valor.',
+          toastDownloaded: (name) => `Arquivo baixado: ${name}`,
+          toastDownloadFail: 'Falha ao gerar o arquivo index.html.',
+          copyLabels: {
+            g1Rot: 'Rotação Eng. 1',
+            g1DiamSide: 'Cima/Baixo Eng. 1',
+            g1WidthSide: 'Esquerda/Direita Eng. 1',
+            g2Rot: 'Rotação Eng. 2',
+            g2DiamSide: 'Cima/Baixo Eng. 2',
+            g2WidthSide: 'Esquerda/Direita Eng. 2',
+            center: 'Distância entre Centros'
+          }
+        },
+        en: {
+          htmlLang: 'en',
+          pageTitle: 'BABFT Gear & Ratio Calculator',
+          appTitle: 'BABFT GEAR & RATIO CALC',
+          headerBadge: '2 Gears',
+          appSubtitle: 'Build A Boat For Treasure • Centered Scaling & Gear Ratio System',
+          langFlag: '🇧🇷',
+          langBtnLabel: 'PT',
+          downloadBtnText: 'Download index.html',
+          downloadFilename: 'index.html',
+          ratiosTitleText: 'Scales / Quick Ratios',
+          ratiosDescText: 'Select a ratio preset between <strong class="text-rose-400">Gear 1</strong> and <strong class="text-amber-400">Gear 2</strong>:',
+          teethUnitShort: 'teeth',
+          ratioDirect: (r) => `Ratio <strong class="text-white font-mono">${r}</strong> — Same speed (1.00x).`,
+          ratioFaster: (r, mult) => `Ratio <strong class="text-white font-mono">${r}</strong> — Gear 2 spins <strong class="text-amber-400 font-mono">${mult}x faster</strong>.`,
+          ratioTorque: (r, speed, torque) => `Ratio <strong class="text-white font-mono">${r}</strong> — <strong class="text-rose-400 font-mono">${torque}x torque</strong> gain (${speed}x speed).`,
+          speedSameLabel: 'Same speed (1.00x)',
+          speedFasterLabel: (mult) => `Gear 2 spins ${mult}x faster`,
+          speedTorqueLabel: (speed) => `Gear 2 spins ${speed}x`,
+          gear1HeadingText: 'Gear 1 (Driver)',
+          gear1TagBadge: 'RED',
+          gear1TeethLabel: 'Tooth Count (N1)',
+          gear2HeadingText: 'Gear 2 (Driven)',
+          gear2TagBadge: 'AMBER',
+          gear2TeethLabel: 'Tooth Count (N2)',
+          minMaxTeethText: 'Min: 3 | Max: 360',
+          moduleLabelText: 'Module / Size (M)',
+          moduleBaseBadge: 'Base bar: 2 studs',
+          moduleHelperText: 'Both gears share the same <strong class="text-zinc-200">Module</strong> so tooth spacing matches cleanly.',
+          turnModeHeading: 'Turn Mode Per Step',
+          turnMode360Title: '360° / N (Standard)',
+          turnMode360Sub: 'Ex: 24 teeth = 15°',
+          turnMode180Title: '180° / N (Half-Turn / Cross)',
+          turnMode180Sub: 'Cross bar (2 teeth)',
+          centerBadge: 'Axle Spacing',
+          centerLabel: 'Center-to-Center Distance:',
+          centerHintText: (val) => `Place <strong class="text-amber-400">Gear 2</strong> center axis <strong class="text-white font-mono">${val}</strong> studs away from <strong class="text-rose-400">Gear 1</strong> center axis.`,
+          ratioBoxLabel: 'Ratio (N1 : N2)',
+          copyCenterBtnText: 'Copy Distance',
+          card1Title: 'Gear 1 (Driver)',
+          card2Title: 'Gear 2 (Driven)',
+          cardTeethBadge: (n) => `${n} Teeth`,
+          rotLabel: 'Rotation',
+          partsCountText: (n) => `• ${n} ${n === 1 ? 'part' : 'parts'}`,
+          copyBtnText: 'Copy',
+          copySideBtnText: 'Copy Side',
+          diamLabel: 'Diameter',
+          diamSideLabel: 'Top / Bottom (each side):',
+          widthLabel: 'Teeth Width',
+          widthSideLabel: 'Left / Right (each side):',
+          baseBlockNote: 'Base bar: 2 studs',
+          totalDeltaText: (val) => `Total: ${val}`,
+          studsUnit: 'studs',
+          canvasHeadingText: '2D Synchronized Simulation',
+          pauseLabel: 'Pause',
+          rotateLabel: 'Rotate',
+          simulateBuildLabel: 'Simulate Build',
+          legendGear1Text: (n, d) => `Gear 1: ${n} teeth • Ø ${d}`,
+          legendGear2Text: (n, d) => `Gear 2: ${n} teeth • Ø ${d}`,
+          buildProgressLabel: 'Building bar:',
+          canvasCenterLabel: (val) => `Centers: ${val} studs`,
+          guideHeadingText: 'Quick Centered Build Guide in BABFT',
+          guideBadgeText: 'STEP BY STEP',
+          step1Badge: 'STEP 01',
+          step1Title: 'Center Gear 1',
+          step1Body: (dSide, wSide, rot) => `From a <strong class="text-zinc-200">2-stud</strong> bar, pull <strong class="text-rose-400 font-mono">${dSide}</strong> <strong class="text-zinc-200">top/bottom</strong> and <strong class="text-rose-400 font-mono">${wSide}</strong> <strong class="text-zinc-200">left/right</strong>. Clone rotating <strong class="text-white font-mono">${rot}</strong>.`,
+          step2Badge: 'STEP 02',
+          step2Title: 'Space the Centers',
+          step2Body: (dist) => `Offset the second axle <strong class="text-white font-mono">${dist}</strong> studs from Gear 1 center.`,
+          step3Badge: 'STEP 03',
+          step3Title: 'Center Gear 2',
+          step3Body: (dSide, wSide, rot) => `Pull <strong class="text-amber-400 font-mono">${dSide}</strong> <strong class="text-zinc-200">top/bottom</strong> and <strong class="text-amber-400 font-mono">${wSide}</strong> <strong class="text-zinc-200">left/right</strong>, rotating <strong class="text-white font-mono">${rot}</strong> to mesh.`,
+          footerLeftText: 'BABFT Gear & Ratio Calculator • Red & Black Theme',
+          footerRightText: 'D = M × (N - 9) [N ≥ 10] • W = 0.2 × M • Centers = (D1 + D2) / 2',
+          toastCopied: (label, val) => `Copied ${label}: ${val}`,
+          toastCopyFail: 'Could not copy value.',
+          toastDownloaded: (name) => `Downloaded: ${name}`,
+          toastDownloadFail: 'Failed to generate index.html file.',
+          copyLabels: {
+            g1Rot: 'Gear 1 Rotation',
+            g1DiamSide: 'Gear 1 Top/Bottom',
+            g1WidthSide: 'Gear 1 Left/Right',
+            g2Rot: 'Gear 2 Rotation',
+            g2DiamSide: 'Gear 2 Top/Bottom',
+            g2WidthSide: 'Gear 2 Left/Right',
+            center: 'Center-to-Center Distance'
+          }
+        }
+      };
+
+      const appState = {
+        currentLang: 'pt',
+        teeth1: 24,
+        teeth2: 12,
+        module: 1,
+        turnMode: '360',
+        isRotating: true,
+        isSimulatingBuild: false,
+        buildStep: 0,
+        lastBuildTick: 0,
+        angle1: 0,
+        metrics: null
+      };
+
+      const langToggleBtn = document.getElementById('langToggleBtn');
+      const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
+      const gear1TeethInput = document.getElementById('gear1TeethInput');
+      const gear1TeethSlider = document.getElementById('gear1TeethSlider');
+      const gear2TeethInput = document.getElementById('gear2TeethInput');
+      const gear2TeethSlider = document.getElementById('gear2TeethSlider');
+      const moduleInput = document.getElementById('moduleInput');
+      const turnMode360Btn = document.getElementById('turnMode360Btn');
+      const turnMode180Btn = document.getElementById('turnMode180Btn');
+      const toggleRotateBtn = document.getElementById('toggleRotateBtn');
+      const simulateBuildBtn = document.getElementById('simulateBuildBtn');
+      const copyCenterBtn = document.getElementById('copyCenterBtn');
+      const canvasContainer = document.getElementById('canvasContainer');
+      const gearCanvas = document.getElementById('gearCanvas');
+      const ctx = gearCanvas.getContext('2d');
+
+      function dict() {
+        return translations[appState.currentLang] || translations.pt;
+      }
+
+      function formatNum(num, maxDecimals = 4) {
+        if (!Number.isFinite(num)) return '0';
+        return String(Number(num.toFixed(maxDecimals)));
+      }
+
+      function formatSigned(num, maxDecimals = 4) {
+        const clean = formatNum(num, maxDecimals);
+        return num > 0 ? `+${clean}` : clean;
+      }
+
+      function gcdInt(a, b) {
+        let x = Math.abs(Math.round(a));
+        let y = Math.abs(Math.round(b));
+        while (y !== 0) {
+          const temp = y;
+          y = x % y;
+          x = temp;
+        }
+        return x || 1;
+      }
+
+      let toastTimeout = null;
+      function notify(message) {
+        const banner = document.getElementById('toastBanner');
+        const textEl = document.getElementById('toastText');
+        textEl.textContent = message;
+        banner.classList.remove('translate-y-24', 'opacity-0');
+        banner.classList.add('translate-y-0', 'opacity-100');
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          banner.classList.add('translate-y-24', 'opacity-0');
+          banner.classList.remove('translate-y-0', 'opacity-100');
+        }, 2300);
+      }
+
+      function copyValue(val, label) {
+        const d = dict();
+        const area = document.createElement('textarea');
+        area.value = String(val);
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        try {
+          document.execCommand('copy');
+          notify(d.toastCopied(label, String(val)));
+        } catch (err) {
+          notify(d.toastCopyFail);
+        }
+        document.body.removeChild(area);
+      }
+
+      // Fórmula BABFT:
+      // - Rotação: (360 ou 180) / N
+      // - Diâmetro: Module * (N - 9) quando N >= 10, ou Module * (N + 1) para N < 10
+      // - Largura: 0.2 * Module
+      function calculateSingleGear(teethCount, modVal, mode) {
+        const n = Math.max(3, Math.min(360, Math.round(teethCount)));
+        const m = Math.max(0.05, Math.min(50, modVal));
+        const isHalfTurn = mode === '180';
+
+        const rotation = (isHalfTurn ? 180 : 360) / n;
+        const partsCount = isHalfTurn ? Math.ceil(n / 2) : n;
+
+        const diameter = n >= 10 ? m * (n - 9) : m * (n + 1);
+        const totalDiamDelta = diameter - BASE_BLOCK_STUDS;
+        const sideDiamDelta = totalDiamDelta / 2;
+
+        const teethWidth = 0.2 * m;
+        const totalWidthDelta = teethWidth - BASE_BLOCK_STUDS;
+        const sideWidthDelta = totalWidthDelta / 2;
+
+        return {
+          teeth: n,
+          module: m,
+          rotation,
+          partsCount,
+          diameter,
+          totalDiamDelta,
+          sideDiamDelta,
+          teethWidth,
+          totalWidthDelta,
+          sideWidthDelta
+        };
+      }
+
+      function recalculate() {
+        const g1 = calculateSingleGear(appState.teeth1, appState.module, appState.turnMode);
+        const g2 = calculateSingleGear(appState.teeth2, appState.module, appState.turnMode);
+        const centerDistance = (g1.diameter + g2.diameter) / 2;
+        const divisor = gcdInt(g1.teeth, g2.teeth);
+        const ratioN1 = g1.teeth / divisor;
+        const ratioN2 = g2.teeth / divisor;
+        const speedRatio = g1.teeth / g2.teeth;
+
+        appState.metrics = {
+          g1,
+          g2,
+          centerDistance,
+          ratioN1,
+          ratioN2,
+          speedRatio
+        };
+
+        renderAllUI();
+        drawCanvas();
+      }
+
+      function renderStaticTexts() {
+        const d = dict();
+        document.documentElement.lang = d.htmlLang;
+        document.title = d.pageTitle;
+        document.getElementById('appTitle').textContent = d.appTitle;
+        document.getElementById('headerBadge').textContent = d.headerBadge;
+        document.getElementById('appSubtitle').textContent = d.appSubtitle;
+        document.getElementById('langFlag').textContent = d.langFlag;
+        document.getElementById('langBtnLabel').textContent = d.langBtnLabel;
+        document.getElementById('downloadBtnText').textContent = d.downloadBtnText;
+
+        document.getElementById('ratiosTitleText').textContent = d.ratiosTitleText;
+        document.getElementById('ratiosDescText').innerHTML = d.ratiosDescText;
+        document.querySelectorAll('.ratio-preset-btn').forEach((btn) => {
+          const sub = btn.querySelector('.ratio-sub');
+          if (sub) sub.textContent = `${btn.dataset.n1} : ${btn.dataset.n2} ${d.teethUnitShort}`;
+        });
+
+        document.getElementById('gear1HeadingText').textContent = d.gear1HeadingText;
+        document.getElementById('gear1TagBadge').textContent = d.gear1TagBadge;
+        document.getElementById('gear1TeethLabel').textContent = d.gear1TeethLabel;
+        document.getElementById('gear1MinMaxText').textContent = d.minMaxTeethText;
+
+        document.getElementById('gear2HeadingText').textContent = d.gear2HeadingText;
+        document.getElementById('gear2TagBadge').textContent = d.gear2TagBadge;
+        document.getElementById('gear2TeethLabel').textContent = d.gear2TeethLabel;
+        document.getElementById('gear2MinMaxText').textContent = d.minMaxTeethText;
+
+        document.getElementById('moduleLabelText').textContent = d.moduleLabelText;
+        document.getElementById('moduleBaseBadge').textContent = d.moduleBaseBadge;
+        document.getElementById('moduleHelperText').innerHTML = d.moduleHelperText;
+
+        document.getElementById('turnModeHeading').textContent = d.turnModeHeading;
+        document.getElementById('turnMode360Title').textContent = d.turnMode360Title;
+        document.getElementById('turnMode360Sub').textContent = d.turnMode360Sub;
+        document.getElementById('turnMode180Title').textContent = d.turnMode180Title;
+        document.getElementById('turnMode180Sub').textContent = d.turnMode180Sub;
+
+        document.getElementById('centerBadge').textContent = d.centerBadge;
+        document.getElementById('centerLabel').textContent = d.centerLabel;
+        document.getElementById('ratioBoxLabel').textContent = d.ratioBoxLabel;
+        document.getElementById('copyCenterBtnText').textContent = d.copyCenterBtnText;
+
+        document.getElementById('card1Title').textContent = d.card1Title;
+        document.getElementById('card2Title').textContent = d.card2Title;
+        document.querySelectorAll('.rot-label').forEach((el) => { el.textContent = d.rotLabel; });
+        document.querySelectorAll('.diam-label').forEach((el) => { el.textContent = d.diamLabel; });
+        document.querySelectorAll('.diam-side-label').forEach((el) => { el.textContent = d.diamSideLabel; });
+        document.querySelectorAll('.width-label').forEach((el) => { el.textContent = d.widthLabel; });
+        document.querySelectorAll('.width-side-label').forEach((el) => { el.textContent = d.widthSideLabel; });
+
+        document.querySelectorAll('.copy-metric-btn').forEach((b) => { b.textContent = d.copyBtnText; });
+        document.querySelectorAll('.copy-side-btn').forEach((b) => { b.textContent = d.copySideBtnText; });
+        document.querySelectorAll('.base-block-note').forEach((el) => { el.textContent = d.baseBlockNote; });
+        document.querySelectorAll('.studs-unit').forEach((el) => { el.textContent = d.studsUnit; });
+
+        document.getElementById('canvasHeadingText').textContent = d.canvasHeadingText;
+        document.getElementById('rotateBtnLabel').textContent = appState.isRotating ? d.pauseLabel : d.rotateLabel;
+        document.getElementById('rotateBtnIcon').textContent = appState.isRotating ? '❚❚' : '▶';
+        document.getElementById('simulateBuildLabel').textContent = d.simulateBuildLabel;
+        document.getElementById('buildProgressLabel').textContent = d.buildProgressLabel;
+
+        document.getElementById('guideHeadingText').textContent = d.guideHeadingText;
+        document.getElementById('guideBadgeText').textContent = d.guideBadgeText;
+        document.getElementById('step1Badge').textContent = d.step1Badge;
+        document.getElementById('step1Title').textContent = d.step1Title;
+        document.getElementById('step2Badge').textContent = d.step2Badge;
+        document.getElementById('step2Title').textContent = d.step2Title;
+        document.getElementById('step3Badge').textContent = d.step3Badge;
+        document.getElementById('step3Title').textContent = d.step3Title;
+
+        document.getElementById('footerLeftText').textContent = d.footerLeftText;
+        document.getElementById('footerRightText').textContent = d.footerRightText;
+      }
+
+      function renderAllUI() {
+        renderStaticTexts();
+        const d = dict();
+        const { g1, g2, centerDistance, ratioN1, ratioN2, speedRatio } = appState.metrics;
+        const ratioStr = `${ratioN1} : ${ratioN2}`;
+        const centerStr = formatNum(centerDistance, 4);
+
+        document.getElementById('ratioLiveBadge').textContent = ratioStr;
+        document.getElementById('ratioMainValue').textContent = ratioStr;
+        document.getElementById('centerDistanceValue').textContent = `${centerStr} ${d.studsUnit}`;
+        document.getElementById('centerHintText').innerHTML = d.centerHintText(centerStr);
+
+        const summaryEl = document.getElementById('ratioSummaryText');
+        const speedEl = document.getElementById('ratioSpeedText');
+        if (g1.teeth === g2.teeth) {
+          summaryEl.innerHTML = d.ratioDirect(ratioStr);
+          speedEl.textContent = d.speedSameLabel;
+        } else if (g1.teeth > g2.teeth) {
+          const mult = formatNum(speedRatio, 2);
+          summaryEl.innerHTML = d.ratioFaster(ratioStr, mult);
+          speedEl.textContent = d.speedFasterLabel(mult);
+        } else {
+          const sp = formatNum(speedRatio, 2);
+          const tq = formatNum(g2.teeth / g1.teeth, 2);
+          summaryEl.innerHTML = d.ratioTorque(ratioStr, sp, tq);
+          speedEl.textContent = d.speedTorqueLabel(sp);
+        }
+
+        // Engrenagem 1
+        document.getElementById('card1TeethBadge').textContent = d.cardTeethBadge(g1.teeth);
+        document.getElementById('g1RotValue').textContent = `${formatNum(g1.rotation, 3)}°`;
+        document.getElementById('g1PartsText').textContent = d.partsCountText(g1.partsCount);
+        document.getElementById('g1DiamValue').textContent = formatNum(g1.diameter, 4);
+        document.getElementById('g1DiamSideValue').textContent = formatSigned(g1.sideDiamDelta, 4);
+        document.getElementById('g1DiamTotalText').textContent = d.totalDeltaText(formatSigned(g1.totalDiamDelta, 4));
+        document.getElementById('g1WidthValue').textContent = formatNum(g1.teethWidth, 4);
+        document.getElementById('g1WidthSideValue').textContent = formatSigned(g1.sideWidthDelta, 4);
+        document.getElementById('g1WidthTotalText').textContent = d.totalDeltaText(formatSigned(g1.totalWidthDelta, 4));
+
+        // Engrenagem 2
+        document.getElementById('card2TeethBadge').textContent = d.cardTeethBadge(g2.teeth);
+        document.getElementById('g2RotValue').textContent = `${formatNum(g2.rotation, 3)}°`;
+        document.getElementById('g2PartsText').textContent = d.partsCountText(g2.partsCount);
+        document.getElementById('g2DiamValue').textContent = formatNum(g2.diameter, 4);
+        document.getElementById('g2DiamSideValue').textContent = formatSigned(g2.sideDiamDelta, 4);
+        document.getElementById('g2DiamTotalText').textContent = d.totalDeltaText(formatSigned(g2.totalDiamDelta, 4));
+        document.getElementById('g2WidthValue').textContent = formatNum(g2.teethWidth, 4);
+        document.getElementById('g2WidthSideValue').textContent = formatSigned(g2.sideWidthDelta, 4);
+        document.getElementById('g2WidthTotalText').textContent = d.totalDeltaText(formatSigned(g2.totalWidthDelta, 4));
+
+        // Legenda do Canvas
+        document.getElementById('legendGear1Text').textContent = d.legendGear1Text(g1.teeth, formatNum(g1.diameter, 2));
+        document.getElementById('legendGear2Text').textContent = d.legendGear2Text(g2.teeth, formatNum(g2.diameter, 2));
+
+        // Guia rápido
+        document.getElementById('step1Body').innerHTML = d.step1Body(
+          formatSigned(g1.sideDiamDelta, 3),
+          formatSigned(g1.sideWidthDelta, 3),
+          `${formatNum(g1.rotation, 2)}°`
+        );
+        document.getElementById('step2Body').innerHTML = d.step2Body(centerStr);
+        document.getElementById('step3Body').innerHTML = d.step3Body(
+          formatSigned(g2.sideDiamDelta, 3),
+          formatSigned(g2.sideWidthDelta, 3),
+          `${formatNum(g2.rotation, 2)}°`
+        );
+
+        if (appState.turnMode === '360') {
+          turnMode360Btn.className = 'p-2.5 rounded-xl border border-[#ef233c] bg-rose-600/20 text-left transition cursor-pointer';
+          turnMode180Btn.className = 'p-2.5 rounded-xl border border-zinc-800 bg-babft-surface hover:border-zinc-700 text-left transition cursor-pointer';
+        } else {
+          turnMode180Btn.className = 'p-2.5 rounded-xl border border-[#ef233c] bg-rose-600/20 text-left transition cursor-pointer';
+          turnMode360Btn.className = 'p-2.5 rounded-xl border border-zinc-800 bg-babft-surface hover:border-zinc-700 text-left transition cursor-pointer';
+        }
+
+        document.querySelectorAll('.g1-quick-btn').forEach((btn) => {
+          const active = Number(btn.dataset.teeth) === g1.teeth;
+          btn.className = active
+            ? 'g1-quick-btn px-2.5 py-1 rounded-lg bg-rose-600/25 text-rose-300 border border-rose-500/60 text-xs font-mono font-bold transition cursor-pointer'
+            : 'g1-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer';
+        });
+
+        document.querySelectorAll('.g2-quick-btn').forEach((btn) => {
+          const active = Number(btn.dataset.teeth) === g2.teeth;
+          btn.className = active
+            ? 'g2-quick-btn px-2.5 py-1 rounded-lg bg-amber-500/25 text-amber-300 border border-amber-500/60 text-xs font-mono font-bold transition cursor-pointer'
+            : 'g2-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-amber-500/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer';
+        });
+
+        document.querySelectorAll('.mod-quick-btn').forEach((btn) => {
+          const active = Math.abs(parseFloat(btn.dataset.mod) - appState.module) < 0.0001;
+          btn.className = active
+            ? 'mod-quick-btn px-2.5 py-1 rounded-lg bg-rose-600/25 text-rose-300 border border-rose-500/60 text-xs font-mono font-bold transition cursor-pointer'
+            : 'mod-quick-btn px-2.5 py-1 rounded-lg bg-babft-surface hover:bg-rose-600/20 border border-zinc-800 text-xs font-mono text-zinc-300 transition cursor-pointer';
+        });
+
+        document.querySelectorAll('.ratio-preset-btn').forEach((btn) => {
+          const active = Number(btn.dataset.n1) === g1.teeth && Number(btn.dataset.n2) === g2.teeth;
+          btn.className = active
+            ? 'ratio-preset-btn p-2.5 rounded-xl bg-rose-600/25 border border-rose-500/70 text-center transition cursor-pointer'
+            : 'ratio-preset-btn p-2.5 rounded-xl bg-babft-surface hover:bg-rose-600/15 border border-zinc-800 hover:border-rose-500/40 text-center transition cursor-pointer';
+        });
+      }
+
+      function updateGear1Teeth(val, syncField = true) {
+        const clamped = Math.max(3, Math.min(360, Math.round(val)));
+        appState.teeth1 = clamped;
+        if (syncField) gear1TeethInput.value = String(clamped);
+        gear1TeethSlider.value = String(Math.min(120, Math.max(3, clamped)));
+        recalculate();
+      }
+
+      function updateGear2Teeth(val, syncField = true) {
+        const clamped = Math.max(3, Math.min(360, Math.round(val)));
+        appState.teeth2 = clamped;
+        if (syncField) gear2TeethInput.value = String(clamped);
+        gear2TeethSlider.value = String(Math.min(120, Math.max(3, clamped)));
+        recalculate();
+      }
+
+      function updateModuleValue(val, syncField = true) {
+        const clamped = Math.max(0.05, Math.min(50, val));
+        appState.module = clamped;
+        if (syncField) moduleInput.value = formatNum(clamped, 4);
+        recalculate();
+      }
+
+      function resizeCanvas() {
+        const rect = canvasContainer.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        gearCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+        gearCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawCanvas();
+      }
+
+      function drawSingleGear(cx, cy, radiusPx, widthPx, teethCount, angleRad, palette, maxBarsVisible) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angleRad);
+
+        const barCount = Math.ceil(teethCount / 2);
+        const step = Math.PI / barCount;
+        const limit = appState.isSimulatingBuild ? Math.min(barCount, maxBarsVisible) : barCount;
+
+        const isCrimson = palette === 'crimson';
+        const barFill = isCrimson ? 'rgba(239, 35, 60, 0.30)' : 'rgba(245, 158, 11, 0.26)';
+        const barStroke = isCrimson ? 'rgba(255, 77, 109, 0.92)' : 'rgba(251, 191, 36, 0.92)';
+        const tipColor = isCrimson ? '#ef233c' : '#f59e0b';
+        const hubFill = isCrimson ? '#12080c' : '#141008';
+        const hubStroke = isCrimson ? '#ef233c' : '#f59e0b';
+
+        const halfW = Math.max(1.5, widthPx / 2);
+
+        for (let i = 0; i < limit; i++) {
+          ctx.save();
+          ctx.rotate(i * step);
+
+          const activeBar = appState.isSimulatingBuild && i === limit - 1;
+          ctx.fillStyle = activeBar ? 'rgba(255, 255, 255, 0.78)' : barFill;
+          ctx.strokeStyle = activeBar ? '#ffffff' : barStroke;
+          ctx.lineWidth = activeBar ? 1.5 : 1;
+
+          ctx.beginPath();
+          ctx.rect(-halfW, -radiusPx, halfW * 2, radiusPx * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          const tipLen = Math.min(radiusPx * 0.16, Math.max(4, widthPx * 1.3));
+          ctx.fillStyle = tipColor;
+          ctx.fillRect(-halfW, -radiusPx, halfW * 2, tipLen);
+          ctx.fillRect(-halfW, radiusPx - tipLen, halfW * 2, tipLen);
+
+          ctx.restore();
+        }
+
+        const hubR = radiusPx * 0.68;
+        ctx.beginPath();
+        ctx.arc(0, 0, hubR, 0, Math.PI * 2);
+        ctx.fillStyle = hubFill;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = hubStroke;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.max(4, radiusPx * 0.09), 0, Math.PI * 2);
+        ctx.fillStyle = tipColor;
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawCanvas() {
+        if (!appState.metrics) return;
+        const rect = canvasContainer.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+        if (w <= 0 || h <= 0) return;
+
+        ctx.clearRect(0, 0, w, h);
+
+        const { g1, g2, centerDistance } = appState.metrics;
+        const totalDiamStuds = Math.max(1, g1.diameter + g2.diameter);
+        const maxDiamStuds = Math.max(1, Math.max(g1.diameter, g2.diameter));
+
+        const pxScaleX = (w * 0.78) / totalDiamStuds;
+        const pxScaleY = (h * 0.62) / maxDiamStuds;
+        const pxPerStud = Math.min(pxScaleX, pxScaleY);
+
+        const r1Px = (g1.diameter / 2) * pxPerStud;
+        const r2Px = (g2.diameter / 2) * pxPerStud;
+        const w1Px = g1.teethWidth * pxPerStud;
+        const w2Px = g2.teethWidth * pxPerStud;
+
+        const meshSpacingPx = (r1Px + r2Px) * 0.88;
+        const totalWidthPx = r1Px + meshSpacingPx + r2Px;
+        const leftMargin = (w - totalWidthPx) / 2;
+
+        const cx1 = leftMargin + r1Px;
+        const cx2 = cx1 + meshSpacingPx;
+        const cy = h * 0.46;
+
+        // Engrenagem 2 gira na razão exata N1/N2 e em sentido oposto
+        const toothRatio = g1.teeth / g2.teeth;
+        const meshPhase = g2.teeth % 2 === 0 ? Math.PI / g2.teeth : 0;
+        const angle2 = -(appState.angle1 * toothRatio) + meshPhase;
+
+        drawSingleGear(cx1, cy, r1Px, w1Px, g1.teeth, appState.angle1, 'crimson', appState.buildStep);
+        drawSingleGear(cx2, cy, r2Px, w2Px, g2.teeth, angle2, 'amber', appState.buildStep);
+
+        const dimY = cy + Math.max(r1Px, r2Px) + 24;
+        if (dimY < h - 10) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(244, 244, 246, 0.35)';
+          ctx.setLineDash([3, 3]);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx1, cy);
+          ctx.lineTo(cx1, dimY + 3);
+          ctx.moveTo(cx2, cy);
+          ctx.lineTo(cx2, dimY + 3);
+          ctx.stroke();
+
+          ctx.setLineDash([]);
+          ctx.strokeStyle = '#ef233c';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(cx1, dimY);
+          ctx.lineTo(cx2, dimY);
+          ctx.stroke();
+
+          const label = dict().canvasCenterLabel(formatNum(centerDistance, 2));
+          ctx.font = '700 11px "JetBrains Mono", monospace';
+          const tw = ctx.measureText(label).width;
+          const midX = (cx1 + cx2) / 2;
+
+          ctx.fillStyle = '#09090d';
+          ctx.fillRect(midX - tw / 2 - 6, dimY - 9, tw + 12, 18);
+          ctx.strokeStyle = 'rgba(239, 35, 60, 0.55)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(midX - tw / 2 - 6, dimY - 9, tw + 12, 18);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.fillText(label, midX, dimY + 4);
+          ctx.restore();
+        }
+      }
+
+      function animateFrame(now) {
+        let dirty = false;
+
+        if (appState.isRotating && !appState.isSimulatingBuild) {
+          appState.angle1 += 0.01;
+          dirty = true;
+        }
+
+        if (appState.isSimulatingBuild) {
+          const maxSteps = Math.max(
+            Math.ceil(appState.teeth1 / 2),
+            Math.ceil(appState.teeth2 / 2)
+          );
+          if (now - appState.lastBuildTick >= 115) {
+            appState.lastBuildTick = now;
+            appState.buildStep += 1;
+            const progEl = document.getElementById('buildProgressRow');
+            const valEl = document.getElementById('buildProgressValue');
+            if (appState.buildStep > maxSteps) {
+              appState.isSimulatingBuild = false;
+              progEl.classList.add('hidden');
+            } else {
+              progEl.classList.remove('hidden');
+              valEl.textContent = `${appState.buildStep} / ${maxSteps}`;
+            }
+            dirty = true;
+          }
+        }
+
+        if (dirty) {
+          drawCanvas();
+        }
+        requestAnimationFrame(animateFrame);
+      }
+
+      langToggleBtn.addEventListener('click', () => {
+        appState.currentLang = appState.currentLang === 'pt' ? 'en' : 'pt';
+        renderAllUI();
+        drawCanvas();
+      });
+
+      gear1TeethInput.addEventListener('input', () => {
+        if (gear1TeethInput.value.trim() === '') return;
+        const parsed = parseInt(gear1TeethInput.value, 10);
+        if (Number.isFinite(parsed)) updateGear1Teeth(parsed, false);
+      });
+      gear1TeethInput.addEventListener('change', () => {
+        const parsed = parseInt(gear1TeethInput.value, 10);
+        updateGear1Teeth(Number.isFinite(parsed) ? parsed : 24, true);
+      });
+      gear1TeethSlider.addEventListener('input', () => {
+        updateGear1Teeth(parseInt(gear1TeethSlider.value, 10), true);
+      });
+
+      gear2TeethInput.addEventListener('input', () => {
+        if (gear2TeethInput.value.trim() === '') return;
+        const parsed = parseInt(gear2TeethInput.value, 10);
+        if (Number.isFinite(parsed)) updateGear2Teeth(parsed, false);
+      });
+      gear2TeethInput.addEventListener('change', () => {
+        const parsed = parseInt(gear2TeethInput.value, 10);
+        updateGear2Teeth(Number.isFinite(parsed) ? parsed : 12, true);
+      });
+      gear2TeethSlider.addEventListener('input', () => {
+        updateGear2Teeth(parseInt(gear2TeethSlider.value, 10), true);
+      });
+
+      moduleInput.addEventListener('input', () => {
+        const raw = moduleInput.value.trim().replace(',', '.');
+        if (raw === '' || raw.endsWith('.')) return;
+        const parsed = parseFloat(raw);
+        if (Number.isFinite(parsed) && parsed > 0) updateModuleValue(parsed, false);
+      });
+      moduleInput.addEventListener('change', () => {
+        const raw = moduleInput.value.trim().replace(',', '.');
+        const parsed = parseFloat(raw);
+        updateModuleValue(Number.isFinite(parsed) && parsed > 0 ? parsed : 1, true);
+      });
+
+      document.getElementById('gear1QuickButtons').addEventListener('click', (e) => {
+        const btn = e.target.closest('.g1-quick-btn');
+        if (btn) updateGear1Teeth(parseInt(btn.dataset.teeth, 10), true);
+      });
+
+      document.getElementById('gear2QuickButtons').addEventListener('click', (e) => {
+        const btn = e.target.closest('.g2-quick-btn');
+        if (btn) updateGear2Teeth(parseInt(btn.dataset.teeth, 10), true);
+      });
+
+      document.getElementById('moduleQuickButtons').addEventListener('click', (e) => {
+        const btn = e.target.closest('.mod-quick-btn');
+        if (btn) updateModuleValue(parseFloat(btn.dataset.mod), true);
+      });
+
+      document.getElementById('ratioPresetsGrid').addEventListener('click', (e) => {
+        const btn = e.target.closest('.ratio-preset-btn');
+        if (!btn) return;
+        const n1 = parseInt(btn.dataset.n1, 10);
+        const n2 = parseInt(btn.dataset.n2, 10);
+        appState.teeth1 = Math.max(3, Math.min(360, n1));
+        appState.teeth2 = Math.max(3, Math.min(360, n2));
+        gear1TeethInput.value = String(appState.teeth1);
+        gear1TeethSlider.value = String(Math.min(120, appState.teeth1));
+        gear2TeethInput.value = String(appState.teeth2);
+        gear2TeethSlider.value = String(Math.min(120, appState.teeth2));
+        recalculate();
+      });
+
+      turnMode360Btn.addEventListener('click', () => {
+        appState.turnMode = '360';
+        recalculate();
+      });
+
+      turnMode180Btn.addEventListener('click', () => {
+        appState.turnMode = '180';
+        recalculate();
+      });
+
+      toggleRotateBtn.addEventListener('click', () => {
+        appState.isRotating = !appState.isRotating;
+        renderStaticTexts();
+      });
+
+      simulateBuildBtn.addEventListener('click', () => {
+        appState.isSimulatingBuild = true;
+        appState.buildStep = 1;
+        appState.lastBuildTick = performance.now();
+        drawCanvas();
+      });
+
+      copyCenterBtn.addEventListener('click', () => {
+        if (!appState.metrics) return;
+        copyValue(formatNum(appState.metrics.centerDistance, 4), dict().copyLabels.center);
+      });
+
+      document.querySelectorAll('.copy-metric-btn, .copy-side-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (!appState.metrics) return;
+          const { g1, g2 } = appState.metrics;
+          const key = btn.dataset.copyKey;
+          const d = dict();
+          const values = {
+            g1Rot: formatNum(g1.rotation, 3),
+            g1DiamSide: formatSigned(g1.sideDiamDelta, 4),
+            g1WidthSide: formatSigned(g1.sideWidthDelta, 4),
+            g2Rot: formatNum(g2.rotation, 3),
+            g2DiamSide: formatSigned(g2.sideDiamDelta, 4),
+            g2WidthSide: formatSigned(g2.sideWidthDelta, 4)
+          };
+          if (key in values) {
+            copyValue(values[key], d.copyLabels[key]);
+          }
+        });
+      });
+
+      downloadHtmlBtn.addEventListener('click', () => {
+        const d = dict();
+        try {
+          const standaloneHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+          const blob = new Blob([standaloneHtml], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = d.downloadFilename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          notify(d.toastDownloaded(d.downloadFilename));
+        } catch (err) {
+          notify(d.toastDownloadFail);
+        }
+      });
+
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+      recalculate();
+      requestAnimationFrame(animateFrame);
+    })();
+  </script>
+</body>
+</html>
